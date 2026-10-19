@@ -1,0 +1,7 @@
+.claude/
+.vscode/
+.venv/
+era5_data/
+reference/
+__pycache__/
+figs/

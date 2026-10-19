@@ -1,0 +1,10 @@
+# download_era5_201601.py
+cdsapi>=0.7.2
+# shared
+xarray>=2025.1
+netCDF4>=1.7
+numpy>=2.0
+# plot_weather_maps.py
+scipy>=1.13
+matplotlib>=3.10
+cartopy>=0.24
