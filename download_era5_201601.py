@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 import cdsapi
 import xarray as xr
+from tqdm import tqdm
 
 # CDS variable name -> short name in the netCDF file
 var_sfc = {
@@ -39,14 +40,14 @@ def retrieve_with_retry(
     while retries < max_retries:
         try:
             client.retrieve(dataset, request, file_path)
-            print(f'Data successfully retrieved and saved to {file_path}.')
+            tqdm.write(f'Data successfully retrieved and saved to {file_path}.')
             return True
         except Exception as e:
             retries += 1
-            print(f'Attempt {retries} failed: {e}.')
-            print('Retrying in 10 seconds...')
+            tqdm.write(f'Attempt {retries} failed: {e}.')
+            tqdm.write('Retrying in 10 seconds...')
             time.sleep(10)
-    print(f'Failed to retrieve data after {max_retries} attempts.')
+    tqdm.write(f'Failed to retrieve data after {max_retries} attempts.')
     return False
 
 def find_missing(file_path: Path, variables: dict) -> list:
@@ -66,9 +67,9 @@ def download_missing(
     ):
     missing = find_missing(file_path, variables)
     if not missing:
-        print(f'{file_path.name}: all variables present, skip.')
+        tqdm.write(f'{file_path.name}: all variables present, skip.')
         return
-    print(f'{file_path.name}: missing {[variables[m] for m in missing]}, downloading...')
+    tqdm.write(f'{file_path.name}: missing {[variables[m] for m in missing]}, downloading...')
 
     request = {
         'variable': missing,
@@ -99,7 +100,7 @@ def download_missing(
         merged.to_netcdf(merged_path)
     merged_path.replace(file_path)
     new_path.unlink()
-    print(f'Merged {[variables[m] for m in missing]} into {file_path}.')
+    tqdm.write(f'Merged {[variables[m] for m in missing]} into {file_path}.')
 
 def main(save_dir: str):
     output_dir = Path(save_dir)
@@ -107,15 +108,16 @@ def main(save_dir: str):
     C = cdsapi.Client()
     tag = f'{YEAR}{MONTH}{DAYS[0]}-{YEAR}{MONTH}{DAYS[-1]}'
 
-    download_missing(
-        C, 'reanalysis-era5-single-levels', var_sfc,
-        output_dir / f'{tag}_sfc.nc',
-    )
-    download_missing(
-        C, 'reanalysis-era5-pressure-levels', var_upper,
-        output_dir / f'{tag}_upper.nc',
-        extra_request={'pressure_level': pressure_level},
-    )
+    jobs = [
+        ('reanalysis-era5-single-levels', var_sfc, output_dir / f'{tag}_sfc.nc', None),
+        ('reanalysis-era5-pressure-levels', var_upper, output_dir / f'{tag}_upper.nc',
+         {'pressure_level': pressure_level}),
+    ]
+    # outer bar: files done; cdsapi shows its own byte-level bar while downloading
+    with tqdm(jobs, desc='ERA5 files', unit='file') as bar:
+        for dataset, variables, file_path, extra in bar:
+            bar.set_postfix_str(file_path.name)
+            download_missing(C, dataset, variables, file_path, extra_request=extra)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

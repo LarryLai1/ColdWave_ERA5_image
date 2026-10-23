@@ -1,5 +1,6 @@
 # download_era5_201601.py
 cdsapi>=0.7.2
+tqdm>=4.66
 # shared
 xarray>=2025.1
 netCDF4>=1.7

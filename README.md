@@ -1,3 +1,7 @@
+## Step 1: Setup CDSAPI
+follow https://cds.climate.copernicus.eu/how-to-api
+
+## Step 2: Execute
 ```bash
 python -m venv .venv
 source .venv/bin/activate
